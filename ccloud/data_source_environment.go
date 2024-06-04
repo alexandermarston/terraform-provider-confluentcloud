@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 
-	ccloud "github.com/cgroschupp/go-client-confluent-cloud/confluentcloud"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -24,11 +23,11 @@ func environmentDataSource() *schema.Resource {
 }
 
 func environmentDataSourceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	c := meta.(*ccloud.Client)
+	c := meta.(Client)
 
 	name := d.Get("name").(string)
 	log.Printf("[INFO] Reading Environment %s", name)
-	environments, err := c.ListEnvironments()
+	environments, err := c.confluentcloudClient.ListEnvironments()
 	if err != nil {
 		return diag.FromErr(err)
 	}

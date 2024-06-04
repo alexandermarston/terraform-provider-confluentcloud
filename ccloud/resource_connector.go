@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	ccloud "github.com/cgroschupp/go-client-confluent-cloud/confluentcloud"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -95,7 +94,7 @@ func connectorResource() *schema.Resource {
 }
 
 func connectorUpdate(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	c := meta.(*ccloud.Client)
+	c := meta.(Client)
 
 	name := d.Get("name").(string)
 	config := d.Get("config").(map[string]interface{})
@@ -112,7 +111,7 @@ func connectorUpdate(_ context.Context, d *schema.ResourceData, meta interface{}
 		configStrings[key] = value.(string)
 	}
 
-	_, err := c.UpdateConnectorConfig(accountID, clusterID, name, configStrings)
+	_, err := c.confluentcloudClient.UpdateConnectorConfig(accountID, clusterID, name, configStrings)
 	d.SetId(name)
 
 	if err != nil {
@@ -125,7 +124,7 @@ func connectorUpdate(_ context.Context, d *schema.ResourceData, meta interface{}
 }
 
 func connectorCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	c := meta.(*ccloud.Client)
+	c := meta.(Client)
 
 	name := d.Get("name").(string)
 	config := d.Get("config").(map[string]interface{})
@@ -143,7 +142,7 @@ func connectorCreate(ctx context.Context, d *schema.ResourceData, meta interface
 	}
 
 	return diag.FromErr(resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
-		_, err := c.CreateConnector(accountID, clusterID, name, configStrings)
+		_, err := c.confluentcloudClient.CreateConnector(accountID, clusterID, name, configStrings)
 
 		if err != nil {
 			if !strings.Contains(err.Error(), "provisioning") {
@@ -158,14 +157,14 @@ func connectorCreate(ctx context.Context, d *schema.ResourceData, meta interface
 }
 
 func connectorDelete(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	c := meta.(*ccloud.Client)
+	c := meta.(Client)
 	name := d.Get("name").(string)
 	accountID := d.Get("environment_id").(string)
 	clusterID := d.Get("cluster_id").(string)
 
 	var diags diag.Diagnostics
 
-	if err := c.DeleteConnector(accountID, clusterID, name); err != nil {
+	if err := c.confluentcloudClient.DeleteConnector(accountID, clusterID, name); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -199,12 +198,12 @@ func connectorImport(_ context.Context, d *schema.ResourceData, _ interface{}) (
 }
 
 func connectorRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	c := meta.(*ccloud.Client)
+	c := meta.(Client)
 	accountID := d.Get("environment_id").(string)
 	clusterID := d.Get("cluster_id").(string)
 	name := d.Id()
 
-	connector, err := c.GetConnector(accountID, clusterID, name)
+	connector, err := c.confluentcloudClient.GetConnector(accountID, clusterID, name)
 	if err == nil {
 		err = d.Set("config", connector.Config)
 	}

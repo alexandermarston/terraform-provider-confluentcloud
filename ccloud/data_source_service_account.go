@@ -5,7 +5,6 @@ import (
 	"log"
 	"strconv"
 
-	ccloud "github.com/cgroschupp/go-client-confluent-cloud/confluentcloud"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -25,11 +24,11 @@ func serviceAccountDataSource() *schema.Resource {
 }
 
 func serviceAccountDataSourceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	c := meta.(*ccloud.Client)
+	c := meta.(Client)
 
 	name := d.Get("name").(string)
 	log.Printf("[INFO] Reading Service Account %s", name)
-	serviceAccounts, err := c.ListServiceAccounts()
+	serviceAccounts, err := c.confluentcloudClient.ListServiceAccounts()
 	if err != nil {
 		return diag.FromErr(err)
 	}
