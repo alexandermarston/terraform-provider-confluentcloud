@@ -6,7 +6,6 @@ import (
 	"log"
 	"strings"
 
-	ccloud "github.com/cgroschupp/go-client-confluent-cloud/confluentcloud"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -47,7 +46,7 @@ func schemaRegistryResource() *schema.Resource {
 }
 
 func schemaRegistryCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	c := meta.(*ccloud.Client)
+	c := meta.(Client)
 
 	environmentID := d.Get("environment_id").(string)
 	region := d.Get("region").(string)
@@ -55,7 +54,7 @@ func schemaRegistryCreate(ctx context.Context, d *schema.ResourceData, meta inte
 
 	log.Printf("[INFO] Creating Schema Registry %s", environmentID)
 
-	reg, err := c.CreateSchemaRegistry(environmentID, region, serviceProvider)
+	reg, err := c.confluentcloudClient.CreateSchemaRegistry(environmentID, region, serviceProvider)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -72,7 +71,7 @@ func schemaRegistryCreate(ctx context.Context, d *schema.ResourceData, meta inte
 }
 
 func schemaRegistryRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	c := meta.(*ccloud.Client)
+	c := meta.(Client)
 
 	log.Printf("[INFO] Reading Schema Registry %s", d.Id())
 	environmentID := d.Get("environment_id").(string)
@@ -82,7 +81,7 @@ func schemaRegistryRead(ctx context.Context, d *schema.ResourceData, meta interf
 		return diag.FromErr(err)
 	}
 
-	registry, err := c.GetSchemaRegistry(environmentID, d.Id())
+	registry, err := c.confluentcloudClient.GetSchemaRegistry(environmentID, d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}

@@ -30,17 +30,17 @@ func environmentResource() *schema.Resource {
 }
 
 func environmentCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	c := meta.(*ccloud.Client)
+	c := meta.(Client)
 
 	name := d.Get("name").(string)
 
 	log.Printf("[INFO] Creating Environment %s", name)
-	orgID, err := getOrganizationID(c)
+	orgID, err := getOrganizationID(c.confluentcloudClient)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	env, err := c.CreateEnvironment(name, orgID)
+	env, err := c.confluentcloudClient.CreateEnvironment(name, orgID)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -51,17 +51,17 @@ func environmentCreate(ctx context.Context, d *schema.ResourceData, meta interfa
 }
 
 func environmentUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	c := meta.(*ccloud.Client)
+	c := meta.(Client)
 
 	newName := d.Get("name").(string)
 
 	log.Printf("[INFO] Updating Environment %s", d.Id())
-	orgID, err := getOrganizationID(c)
+	orgID, err := getOrganizationID(c.confluentcloudClient)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	env, err := c.UpdateEnvironment(d.Id(), newName, orgID)
+	env, err := c.confluentcloudClient.UpdateEnvironment(d.Id(), newName, orgID)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -72,10 +72,10 @@ func environmentUpdate(ctx context.Context, d *schema.ResourceData, meta interfa
 }
 
 func environmentRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	c := meta.(*ccloud.Client)
+	c := meta.(Client)
 
 	log.Printf("[INFO] Reading Environment %s", d.Id())
-	env, err := c.GetEnvironment(d.Id())
+	env, err := c.confluentcloudClient.GetEnvironment(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -89,10 +89,10 @@ func environmentRead(ctx context.Context, d *schema.ResourceData, meta interface
 }
 
 func environmentDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	c := meta.(*ccloud.Client)
+	c := meta.(Client)
 
 	log.Printf("[INFO] Deleting Environment %s", d.Id())
-	err := c.DeleteEnvironment(d.Id())
+	err := c.confluentcloudClient.DeleteEnvironment(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}

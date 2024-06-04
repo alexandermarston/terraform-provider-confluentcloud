@@ -38,7 +38,7 @@ func serviceAccountResource() *schema.Resource {
 }
 
 func serviceAccountCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	c := meta.(*ccloud.Client)
+	c := meta.(Client)
 
 	name := d.Get("name").(string)
 	description := d.Get("description").(string)
@@ -48,7 +48,7 @@ func serviceAccountCreate(ctx context.Context, d *schema.ResourceData, meta inte
 		Description: description,
 	}
 
-	serviceAccount, err := c.CreateServiceAccount(&req)
+	serviceAccount, err := c.confluentcloudClient.CreateServiceAccount(&req)
 	if err == nil {
 		d.SetId(fmt.Sprintf("%d", serviceAccount.ID))
 
@@ -69,14 +69,14 @@ func serviceAccountCreate(ctx context.Context, d *schema.ResourceData, meta inte
 }
 
 func serviceAccountRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	c := meta.(*ccloud.Client)
+	c := meta.(Client)
 
 	ID, err := strconv.Atoi(d.Id())
 	if err != nil {
 		log.Printf("[ERROR] Could not parse Service Account ID %s to int", d.Id())
 		return diag.FromErr(err)
 	}
-	account, err := getServiceAccount(c, ID)
+	account, err := getServiceAccount(c.confluentcloudClient, ID)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -110,7 +110,7 @@ func getServiceAccount(client *ccloud.Client, id int) (*ccloud.ServiceAccount, e
 }
 
 func serviceAccountDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	c := meta.(*ccloud.Client)
+	c := meta.(Client)
 
 	ID, err := strconv.Atoi(d.Id())
 	if err != nil {
@@ -118,7 +118,7 @@ func serviceAccountDelete(ctx context.Context, d *schema.ResourceData, meta inte
 		return diag.FromErr(err)
 	}
 
-	err = c.DeleteServiceAccount(ID)
+	err = c.confluentcloudClient.DeleteServiceAccount(ID)
 	if err != nil {
 		log.Printf("[ERROR] Service Account can not be deleted: %d", ID)
 		return diag.FromErr(err)

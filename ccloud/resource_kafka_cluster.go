@@ -91,7 +91,7 @@ func kafkaClusterResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "Deployment settings. Currently only `sku` is supported.",
 				Elem: &schema.Schema{
-					Type:     schema.TypeString,
+					Type: schema.TypeString,
 				},
 			},
 			"cku": {
@@ -105,7 +105,7 @@ func kafkaClusterResource() *schema.Resource {
 }
 
 func clusterCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	c := meta.(*ccloud.Client)
+	c := meta.(Client)
 
 	name := d.Get("name").(string)
 	region := d.Get("region").(string)
@@ -143,7 +143,7 @@ func clusterCreate(ctx context.Context, d *schema.ResourceData, meta interface{}
 		Cku:             cku,
 	}
 
-	cluster, err := c.CreateCluster(req)
+	cluster, err := c.confluentcloudClient.CreateCluster(req)
 	if err != nil {
 		log.Printf("[ERROR] createCluster failed %v, %s", req, err)
 		return diag.FromErr(err)
@@ -167,7 +167,7 @@ func clusterCreate(ctx context.Context, d *schema.ResourceData, meta interface{}
 	}
 
 	log.Printf("[DEBUG] Creating bootstrap keypair")
-	key, err := c.CreateAPIKey(&apiKeyReq)
+	key, err := c.confluentcloudClient.CreateAPIKey(&apiKeyReq)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -175,7 +175,7 @@ func clusterCreate(ctx context.Context, d *schema.ResourceData, meta interface{}
 	stateConf := &resource.StateChangeConf{
 		Pending:      []string{"Pending"},
 		Target:       []string{"Ready"},
-		Refresh:      clusterReady(c, d.Id(), accountID, key.Key, key.Secret),
+		Refresh:      clusterReady(c.confluentcloudClient, d.Id(), accountID, key.Key, key.Secret),
 		Timeout:      24 * 60 * 60 * time.Second,
 		Delay:        3 * time.Second,
 		PollInterval: 5 * time.Second,
@@ -189,7 +189,7 @@ func clusterCreate(ctx context.Context, d *schema.ResourceData, meta interface{}
 	}
 
 	log.Printf("[DEBUG] Deleting bootstrap keypair")
-	err = c.DeleteAPIKey(fmt.Sprintf("%d", key.ID), accountID, logicalClusters)
+	err = c.confluentcloudClient.DeleteAPIKey(fmt.Sprintf("%d", key.ID), accountID, logicalClusters)
 	if err != nil {
 		log.Printf("[ERROR] Unable to delete bootstrap api key %s", err)
 	}
@@ -236,11 +236,11 @@ func canConnect(connection, username, password string) bool {
 }
 
 func clusterDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	c := meta.(*ccloud.Client)
+	c := meta.(Client)
 	accountID := d.Get("environment_id").(string)
 	var diags diag.Diagnostics
 
-	if err := c.DeleteCluster(d.Id(), accountID); err != nil {
+	if err := c.confluentcloudClient.DeleteCluster(d.Id(), accountID); err != nil {
 		return diag.FromErr(err)
 	}
 	return diags
@@ -265,10 +265,10 @@ func clusterImport(_ context.Context, d *schema.ResourceData, _ interface{}) ([]
 }
 
 func clusterRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	c := meta.(*ccloud.Client)
+	c := meta.(Client)
 	accountID := d.Get("environment_id").(string)
 
-	cluster, err := c.GetCluster(d.Id(), accountID)
+	cluster, err := c.confluentcloudClient.GetCluster(d.Id(), accountID)
 	if err == nil {
 		err = d.Set("bootstrap_servers", cluster.Endpoint)
 	}

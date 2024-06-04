@@ -68,7 +68,7 @@ func apiKeyResource() *schema.Resource {
 }
 
 func apiKeyCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	c := meta.(*ccloud.Client)
+	c := meta.(Client)
 
 	clusterID := d.Get("cluster_id").(string)
 	logicalClusters := d.Get("logical_clusters").([]interface{})
@@ -97,7 +97,7 @@ func apiKeyCreate(ctx context.Context, d *schema.ResourceData, meta interface{})
 	}
 
 	log.Printf("[DEBUG] Creating API key")
-	key, err := c.CreateAPIKey(&req)
+	key, err := c.confluentcloudClient.CreateAPIKey(&req)
 	if err == nil {
 		d.SetId(fmt.Sprintf("%d", key.ID))
 
@@ -117,7 +117,7 @@ func apiKeyCreate(ctx context.Context, d *schema.ResourceData, meta interface{})
 			stateConf := &resource.StateChangeConf{
 				Pending:      []string{"Pending"},
 				Target:       []string{"Ready"},
-				Refresh:      clusterReady(c, clusterID, accountID, key.Key, key.Secret),
+				Refresh:      clusterReady(c.confluentcloudClient, clusterID, accountID, key.Key, key.Secret),
 				Timeout:      300 * time.Second,
 				Delay:        10 * time.Second,
 				PollInterval: 5 * time.Second,
@@ -145,28 +145,17 @@ func apiKeyRead(ctx context.Context, d *schema.ResourceData, meta interface{}) d
 }
 
 func apiKeyDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	c := meta.(*ccloud.Client)
+	c := meta.(Client)
 
-	clusterID := d.Get("cluster_id").(string)
-	logicalClusters := d.Get("logical_clusters").([]interface{})
-	accountID := d.Get("environment_id").(string)
+	key := d.Get("key").(string)
+	log.Printf("[INFO] Deleting API key %s", key)
 
-	logicalClustersReq := []ccloud.LogicalCluster{}
-	if len(clusterID) > 0 {
-		logicalClustersReq = append(logicalClustersReq, ccloud.LogicalCluster{ID: clusterID})
+	req := c.apiKeysClient.APIKeysIamV2Api.DeleteIamV2ApiKey(c.authCtx, key)
+	_, err := req.Execute()
+
+	if err != nil {
+		return diag.Errorf("error deleting API Key %q: %s", key, err)
 	}
-
-	for i := range logicalClusters {
-		if clusterID != logicalClusters[i].(string) {
-			logicalClustersReq = append(logicalClustersReq, ccloud.LogicalCluster{
-				ID: logicalClusters[i].(string),
-			})
-		}
-	}
-
-	id := d.Id()
-	log.Printf("[INFO] Deleting API key %s in account %s", id, accountID)
-	err := c.DeleteAPIKey(id, accountID, logicalClustersReq)
 
 	return diag.FromErr(err)
 }
